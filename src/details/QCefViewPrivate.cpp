@@ -710,6 +710,14 @@ QCefViewPrivate::onViewInputMethodEvent(QInputMethodEvent* event)
     auto composedText = event->commitString();
 
     if (!composedText.isEmpty()) {
+      CefCompositionUnderline underline;
+      underline.background_color = 0;
+      underline.range = { 0, static_cast<uint32_t>(composedText.length()) };
+      CefRange selectionRange;
+      selectionRange.Set(0, 0);
+      pCefBrowser_->GetHost()->ImeSetComposition(
+        composedText.toStdString(), { underline }, CefRange(UINT32_MAX, UINT32_MAX), selectionRange);
+      
       pCefBrowser_->GetHost()->ImeCommitText(composedText.toStdString(), CefRange(UINT32_MAX, UINT32_MAX), 0);
     } else if (!composingText.isEmpty()) {
       CefCompositionUnderline underline;
@@ -818,6 +826,18 @@ QCefViewPrivate::onViewKeyEvent(QKeyEvent* event)
 
     // QEvent::KeyRelease - send key release event
     if (event->type() == QEvent::KeyRelease) {
+      static std::once_flag flag;
+      std::call_once(flag, [this, event]() {
+        CefCompositionUnderline underline;
+        underline.background_color = 0;
+        underline.range = { 0, static_cast<uint32_t>(event->text().length()) };
+        CefRange selectionRange;
+        selectionRange.Set(0, 0);
+        pCefBrowser_->GetHost()->ImeSetComposition(
+          event->text().toStdString(), { underline }, CefRange(UINT32_MAX, UINT32_MAX), selectionRange);
+        pCefBrowser_->GetHost()->ImeCancelComposition();
+      });
+
       e.type = KEYEVENT_KEYUP;
       pCefBrowser_->GetHost()->SendKeyEvent(e);
       return;
