@@ -226,7 +226,7 @@ QCefViewPrivate::onCefBrowserCreated(CefRefPtr<CefBrowser> browser, QWindow* win
       browser->GetHost()->CloseBrowser(true);
       return;
     }
-    
+
     // adjust size/mask and attach to cef window
     ncw.qBrowserWindow_->applyMask(q_ptr->mask());
 
@@ -616,6 +616,41 @@ QCefViewPrivate::closeDevTools()
 }
 
 bool
+QCefViewPrivate::onFileDialog(QFileDialog::AcceptMode acceptMode,
+                              QFileDialog::FileMode mode,
+                              const QString& title,
+                              const QString& defaultFilePath,
+                              const QStringList& acceptFilters,
+                              CefRefPtr<CefFileDialogCallback> callback)
+{
+  Q_Q(QCefView);
+
+  // Create a custom file dialog using Qt.
+  QFileDialog fileDialog(q, title, defaultFilePath);
+  fileDialog.setAcceptMode(acceptMode);
+  fileDialog.setFileMode(mode);
+  fileDialog.setNameFilters(acceptFilters);
+
+  if (fileDialog.exec() == QDialog::Accepted) {
+    QStringList selectedFiles = fileDialog.selectedFiles();
+
+    // Convert the selected files to a std::vector<CefString>.
+    std::vector<CefString> cefSelectedFiles;
+    for (const auto& file : selectedFiles) {
+      cefSelectedFiles.emplace_back(QDir::toNativeSeparators(file).toStdString());
+    }
+    // Notify CEF that the file dialog has completed with the selected files.
+    callback->Continue(cefSelectedFiles);
+  } else {
+    // Notify CEF that the file dialog was canceled.
+    callback->Cancel();
+  }
+  // Return true if you handle the file dialog.
+  // TODO:Return the true or false as needed
+  return true;
+}
+
+bool
 QCefViewPrivate::eventFilter(QObject* watched, QEvent* event)
 {
   Q_Q(QCefView);
@@ -918,7 +953,7 @@ QCefViewPrivate::onViewWheelEvent(QWheelEvent* event)
 
     // angleDelta().y() provides the angle through which the common vertical mouse wheel was rotated since the previous
     // event. angleDelta().x() provides the angle through which the horizontal mouse wheel was rotated, if the mouse has
-    // a horizontal wheel; otherwise it stays at zero. 
+    // a horizontal wheel; otherwise it stays at zero.
     pCefBrowser_->GetHost()->SendMouseWheelEvent(
       e, m & Qt::ShiftModifier ? d.x() : 0, m & Qt::ShiftModifier ? d.y() : d.y());
   }

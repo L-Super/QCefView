@@ -1,5 +1,6 @@
 ﻿#pragma once
 #pragma region qt_headers
+#include <QFileDialog>
 #include <QMenu>
 #include <QMutex>
 #include <QPointer>
@@ -250,6 +251,13 @@ protected:
   void showDevTools();
 
   void closeDevTools();
+
+  bool onFileDialog(QFileDialog::AcceptMode acceptMode,
+                    QFileDialog::FileMode mode,
+                    const QString& title,
+                    const QString& defaultFilePath,
+                    const QStringList& acceptFilters,
+                    CefRefPtr<CefFileDialogCallback> callback);
 
 protected:
   bool eventFilter(QObject* watched, QEvent* event) override;
